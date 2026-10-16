@@ -1,0 +1,33 @@
+# Preprocesamiento: selección de datos de WiSig ManySig + definición de resoluciones STFT.
+# Fuente única de verdad: los experimentos apuntan a este archivo.
+name: manysig_eq1_rx1-1_d0301
+
+dataset:
+  pkl_path: data/raw/ManySig.pkl      # mover/copiar aquí el pkl, o usar --pkl en scripts.preprocess
+  equalized: 1                        # d005_ManySig_nsig_eq usa equalized=1
+  tx_list: null                       # null = los 6 transmisores
+  rx_list: ["1-1"]                    # un Rx fijo para aislar el efecto de la resolución
+  date_list: ["2021_03_01"]           # una fecha fija
+  n_per_cell: 1000                    # señales por (Tx, Rx, fecha)
+
+split:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+  seed: 42
+
+stft:
+  signal_len: 256
+  window: hann
+  log_scale: true          # 10*log10(|X|^2 + eps)
+  normalize: per_sample    # z-score por muestra: no usa estadísticas del conjunto de prueba
+  patch_size_check: 8      # solo para avisar si F o T no son múltiplos del parche
+
+# Resoluciones definidas por PARÁMETROS DE GENERACIÓN (no por resize).
+# Forma resultante: F = n_fft (altura, frecuencia), T = signal_len // hop (ancho, tiempo).
+# CANDIDATAS: confirmar con `python -m preprocessing.explore_stft` antes de fijarlas.
+resolutions:
+  R32x32:   {n_fft: 32,  win_len: 32,  hop: 8}
+  R64x64:   {n_fft: 64,  win_len: 64,  hop: 4}
+  R96x64:   {n_fft: 96,  win_len: 96,  hop: 4}
+  R128x128: {n_fft: 128, win_len: 128, hop: 2}

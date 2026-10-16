@@ -1,0 +1,12 @@
+# PyTorch se instala aparte (ver README) para obtener la build con CUDA.
+numpy
+scipy
+pandas
+scikit-learn
+matplotlib
+seaborn
+pyyaml
+tqdm
+nbformat
+jupyterlab
+ipykernel

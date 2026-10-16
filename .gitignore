@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.idea/
+.ipynb_checkpoints/
+*.pkl
+*.pt
+data/raw/*
+data/processed/*
+runs/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!runs/.gitkeep
