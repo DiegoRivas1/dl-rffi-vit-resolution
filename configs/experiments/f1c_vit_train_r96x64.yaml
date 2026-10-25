@@ -1,0 +1,39 @@
+﻿# FASE 1: ViT convencional, entrenado en R_train y evaluado SIN fine-tuning en R_test.
+experiment:
+  name: f1c_vit_train_r96x64
+  phase: 1
+  seed: 42
+
+data:
+  preprocess_config: configs/preprocess/manysig_eq1.yaml
+
+resolution:
+  train: R96x64
+  test: [R32x32, R64x64, R96x64, R128x128]
+
+model:
+  type: vit
+  in_chans: 1
+  patch_size: 8
+  embed_dim: 192
+  depth: 6
+  num_heads: 3
+  mlp_ratio: 4.0
+  dropout: 0.1
+
+training:
+  epochs: 100
+  batch_size: 64
+  lr: 3.0e-4
+  weight_decay: 0.05
+  warmup_epochs: 5
+  label_smoothing: 0.0
+  grad_clip: 1.0
+  amp: true
+  save_every: 1        # last.pt cada N Ã©pocas (1 = pausar con Ctrl+C sin perder casi nada)
+  patience: 20         # early stopping sobre accuracy de validaciÃ³n (R_train)
+  num_workers: 0
+
+output:
+  runs_dir: runs
+
