@@ -79,6 +79,15 @@ class ViT(nn.Module):
         grid = grid.permute(0, 2, 3, 1).reshape(1, gh * gw, -1).to(cls.dtype)
         return torch.cat([cls, grid], dim=1)
 
+    @torch.no_grad()
+    def adapt_to(self, hw):
+        """FINE-TUNING (fase 2): fija la cuadrícula de posiciones a la de `hw`.
+        El pos_embed se interpola UNA vez y pasa a ser el parámetro entrenable de la nueva cuadrícula."""
+        gh, gw = hw[0] // self.p, hw[1] // self.p
+        new = self._pos(gh, gw).detach().clone()
+        self.pos_embed = nn.Parameter(new)
+        self.grid0 = (gh, gw)
+
     def forward(self, x):
         B, _, H, W = x.shape
         if H % self.p or W % self.p:
