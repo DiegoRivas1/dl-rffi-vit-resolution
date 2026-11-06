@@ -1,0 +1,43 @@
+﻿# FASE 3: MSViT adaptado (Jiang et al.), mismo protocolo que la fase 1: entrenado en R_train y
+# evaluado SIN fine-tuning en R_test. Misma receta de entrenamiento, particiones y semilla que f1.
+experiment:
+  name: f3_msvit_base_r64_s44
+  phase: 3
+  seed: 44
+
+data:
+  preprocess_config: configs/preprocess/manysig_eq1.yaml
+
+resolution:
+  train: R64x64
+  test: [R32x32, R64x64, R96x64, R128x128]
+
+model:
+  type: msvit
+  in_chans: 1
+  patch_size: 4            # tamaÃ±o del parche de SC-Conv (DCT 4x4)
+  dims: [64, 128, 256]     # dimensiÃ³n por etapa
+  depths: [2, 4, 2]        # bloques por etapa
+  head_dim: 32             # cabezas = dim / head_dim -> 2, 4, 8
+  mlp_ratio: 4.0
+  dropout: 0.1
+  rep_kernel: 3            # kernel de RepCPE (3 | 5 | 7)
+  use_scconv: true         # false -> patch embedding convolucional estÃ¡ndar (ablaciÃ³n)
+  use_repcpe: true         # false -> sin informaciÃ³n posicional (ablaciÃ³n)
+
+training:
+  epochs: 100
+  batch_size: 64
+  lr: 3.0e-4
+  weight_decay: 0.05
+  warmup_epochs: 5
+  label_smoothing: 0.0
+  grad_clip: 1.0
+  amp: true
+  save_every: 1
+  patience: 20
+  num_workers: 0
+
+output:
+  runs_dir: runs
+

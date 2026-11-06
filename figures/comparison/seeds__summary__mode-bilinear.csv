@@ -1,0 +1,17 @@
+model,method,R_test,H,W,mean,std,count
+msvit,STFT regenerada,R32x32,32,32,0.2391,0.0679,5
+msvit,STFT regenerada,R64x64,64,64,0.9987,0.0009,5
+msvit,STFT regenerada,R96x64,96,64,0.1869,0.0923,5
+msvit,STFT regenerada,R128x128,128,128,0.1667,0.0,5
+vit,STFT regenerada,R32x32,32,32,0.1973,0.0561,5
+vit,STFT regenerada,R64x64,64,64,0.9989,0.0008,5
+vit,STFT regenerada,R96x64,96,64,0.162,0.0626,5
+vit,STFT regenerada,R128x128,128,128,0.1667,0.0,5
+msvit,redimensionada (bilinear),R32x32,32,32,0.1533,0.0563,5
+msvit,redimensionada (bilinear),R64x64,64,64,0.9987,0.0009,5
+msvit,redimensionada (bilinear),R96x64,96,64,0.3287,0.1637,5
+msvit,redimensionada (bilinear),R128x128,128,128,0.1667,0.0,5
+vit,redimensionada (bilinear),R32x32,32,32,0.1429,0.0678,5
+vit,redimensionada (bilinear),R64x64,64,64,0.9989,0.0008,5
+vit,redimensionada (bilinear),R96x64,96,64,0.1593,0.0569,5
+vit,redimensionada (bilinear),R128x128,128,128,0.1622,0.0099,5

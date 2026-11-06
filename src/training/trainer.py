@@ -29,7 +29,8 @@ class Trainer:
         self.t = t
         decay, no_decay = [], []
         for n, p in model.named_parameters():
-            (decay if p.ndim >= 2 and n not in ("pos_embed", "cls_token") else no_decay).append(p)
+            #(decay if p.ndim >= 2 and n not in ("pos_embed", "cls_token") else no_decay).append(p)
+            (decay if p.ndim >= 2 and n not in ("pos_embed", "cls_token") and "rep_k" not in n else no_decay).append(p)
         self.opt = torch.optim.AdamW([{"params": decay, "weight_decay": t.weight_decay},
                                       {"params": no_decay, "weight_decay": 0.0}], lr=t.lr)
         self.sched = torch.optim.lr_scheduler.LambdaLR(self.opt, self._lr_factor)
