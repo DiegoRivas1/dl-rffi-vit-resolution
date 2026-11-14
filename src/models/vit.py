@@ -49,6 +49,7 @@ class ViT(nn.Module):
             raise ValueError(f"La entrada de entrenamiento {train_hw} debe ser múltiplo del parche {p}.")
         self.p = p
         self.grid0 = (H // p, W // p)
+        self.ref_hw = None      # variante de evaluación: si se fija a (H, W) de entrenamiento, el parche escala con la entrada
         self.patch_embed = nn.Conv2d(in_chans, embed_dim, p, p)
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.pos_embed = nn.Parameter(torch.zeros(1, 1 + self.grid0[0] * self.grid0[1], embed_dim))
@@ -90,11 +91,23 @@ class ViT(nn.Module):
 
     def forward(self, x):
         B, _, H, W = x.shape
-        if H % self.p or W % self.p:
-            raise ValueError(f"Entrada {H}x{W} no es múltiplo del parche {self.p}.")
-        x = self.patch_embed(x).flatten(2).transpose(1, 2)
-        x = torch.cat([self.cls_token.expand(B, -1, -1), x], dim=1)
-        x = self.pos_drop(x + self._pos(H // self.p, W // self.p).to(x.dtype))
+        if self.ref_hw is not None and (H, W) != tuple(self.ref_hw):
+            # Parche escalado: la rejilla de tokens es la de entrenamiento, así que el pos_embed NO se interpola.
+            from .patch_scale import rescale_patch_kernel
+            ph, pw = self.p * H / self.ref_hw[0], self.p * W / self.ref_hw[1]
+            if ph != int(ph) or pw != int(pw) or ph < 1 or pw < 1:
+                raise ValueError(f"Entrada {H}x{W}: el parche escalado ({ph}, {pw}) no es entero.")
+            pt = (int(ph), int(pw))
+            k = rescale_patch_kernel(self.patch_embed.weight, pt).to(x.dtype)
+            x = F.conv2d(x, k, self.patch_embed.bias, stride=pt).flatten(2).transpose(1, 2)
+            x = torch.cat([self.cls_token.expand(B, -1, -1), x], dim=1)
+            x = self.pos_drop(x + self.pos_embed.to(x.dtype))
+        else:
+            if H % self.p or W % self.p:
+                raise ValueError(f"Entrada {H}x{W} no es múltiplo del parche {self.p}.")
+            x = self.patch_embed(x).flatten(2).transpose(1, 2)
+            x = torch.cat([self.cls_token.expand(B, -1, -1), x], dim=1)
+            x = self.pos_drop(x + self._pos(H // self.p, W // self.p).to(x.dtype))
         for b in self.blocks:
             x = b(x)
         return self.head(self.norm(x)[:, 0])

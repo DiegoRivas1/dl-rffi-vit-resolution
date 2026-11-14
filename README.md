@@ -3,11 +3,32 @@
 Experimentación de la tesis *Generalización de Vision Transformers ante cambios de resolución para la
 identificación de dispositivos mediante RF Fingerprinting* (UNSA, EPCC).
 
+Pregunta: un ViT entrenado con espectrogramas de una resolución (`R64x64`), ¿sigue identificando al transmisor
+cuando la resolución de prueba cambia, **sin fine-tuning**? ¿Lo mejora una arquitectura multiescala (MSViT)?
+
 | Fase | Contenido | Estado |
 |---|---|---|
-| 1 | ViT convencional, entrenado en `R_train`, evaluado SIN fine-tuning en `R_test` | **implementada** |
-| 2 | ViT + fine-tuning en `R_test` (control de adaptación; se reporta aparte) | pendiente |
-| 3 | MSViT (SC-Conv, HVSA, RepCPE; Jiang et al.) sin fine-tuning | pendiente |
+| 1 | ViT convencional, entrenado en `R_train`, evaluado sin fine-tuning en `R_test` | hecha (5 semillas) |
+| 1c | Control: ViT entrenado y probado en la misma resolución | hecha |
+| 2 | ViT + fine-tuning en `R_test` (cota de adaptación; se reporta aparte) | hecha (1 semilla) |
+| 3 | MSViT adaptado (SC-Conv, HVSA, RepCPE; Jiang et al.) sin fine-tuning | hecha (5 semillas) |
+| 3b | Controles de MSViT: redimensionamiento, sensibilidad por eje, parche escalado | hecha |
+
+## Datos y resoluciones
+
+WiSig `ManySig.pkl`: 6 transmisores (clases), `equalized = 1`, receptor `1-1`, fecha `2021_03_01` → 6000 señales I/Q
+de 256 muestras. Partición estratificada 70/15/15 (4200/900/900, semilla 42), hecha **antes** de generar resoluciones.
+
+La resolución se define por los parámetros de la STFT (no por resize): `F = n_fft`, `T = 256 // hop`, `win_len = n_fft`.
+
+| Nombre | n_fft | hop | Forma F×T | Uso |
+|---|---|---|---|---|
+| `R32x32` | 32 | 8 | 32×32 | prueba |
+| `R64x64` | 64 | 4 | 64×64 | **entrenamiento** |
+| `R96x64` | 96 | 4 | 96×64 | prueba |
+| `R128x128` | 128 | 2 | 128×128 | prueba |
+
+Todo se configura en `configs/preprocess/manysig_eq1.yaml` (ver `preprocessing/README.md`).
 
 ## Instalación (Windows / PowerShell)
 
@@ -24,50 +45,170 @@ python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 python -m ipykernel install --user --name dl-rffi-vit --display-name "Python (dl-rffi-vit)"
 ```
 
-## Flujo de trabajo
+## Comandos por sección
+
+Todos se ejecutan desde la raíz del repositorio.
+
+### 0. Pruebas aisladas (sin datos)
 
 ```powershell
-# 0) Pruebas aisladas (sin datos)
 python -m src.utils.naming
-python -m preprocessing.stft_generator
+python -m preprocessing.stft_generator      # formas y posición de un tono por resolución
 python -m preprocessing.dataset_loader
 python -m preprocessing.splits
-python -m src.models.vit
-
-# 1) Explorar resoluciones posibles (tabla + espectrogramas) y definirlas en el YAML de preprocesamiento
-python -m preprocessing.explore_stft
-python -m preprocessing.explore_stft --pkl data/raw/ManySig.pkl      # chequeo equalized 0 vs 1
-
-# 2) Subconjunto + particiones (mover ManySig.pkl a data/raw/ o usar --pkl)
-python -m scripts.preprocess --config configs/preprocess/manysig_eq1.yaml
-
-# 3) Entrenar + evaluar en todas las resoluciones (sin fine-tuning)
-python -m scripts.train --config configs/experiments/f1_vit_base_r64.yaml
-#    Pausar: Ctrl+C   ·  Continuar:
-python -m scripts.train --config configs/experiments/f1_vit_base_r64.yaml --resume
-#    Empezar de cero:  --overwrite
-
-# 4) Re-evaluar un modelo guardado
-python -m scripts.evaluate --config configs/experiments/f1_vit_base_r64.yaml --ckpt best
-
-# 5) Comparar modelos
-jupyter lab notebooks/comparison.ipynb
-
-# Prueba rápida del pipeline con datos sintéticos (sin el pkl de 2.3 GB)
-python -m scripts.make_synthetic_pkl
+python -m src.models.vit                    # incluye la interpolación del positional embedding
+python src/models/msvit.py                  # DCT, SC-Conv fusionada, Toeplitz, HVSA, parche escalado
+python src/models/patch_scale.py            # reescalado de un kernel de parche en el dominio DCT (ViT)
 ```
+
+### 1. Preprocesamiento
+
+```powershell
+python -m scripts.inspect_manysig --pkl data/raw/ManySig.pkl         # estructura del pkl
+python -m preprocessing.explore_stft                                 # tabla de resoluciones posibles
+python -m preprocessing.explore_stft --pkl data/raw/ManySig.pkl      # + espectrogramas reales (equalized 0 vs 1)
+python -m scripts.preprocess --config configs/preprocess/manysig_eq1.yaml
+```
+
+Salidas: `data/processed/<nombre>_subset.npz` y `_splits.npz`; figura
+`figures/exploration/explore__spectrogram_grid__data-real.png`.
+
+Sin el pkl de 2.3 GB se puede probar el pipeline con `python -m scripts.make_synthetic_pkl`.
+
+### 2. Fase 1 — ViT sin fine-tuning
+
+```powershell
+python -m scripts.train --config configs/experiments/f1_vit_base_r64.yaml
+python -m scripts.train --config configs/experiments/f1_vit_base_r64.yaml --resume      # continuar tras Ctrl+C
+python -m scripts.train --config configs/experiments/f1_vit_base_r64.yaml --overwrite   # empezar de cero
+python -m scripts.evaluate --config configs/experiments/f1_vit_base_r64.yaml --ckpt best
+```
+
+Semillas 43–46: mismos comandos con `f1_vit_base_r64_s43.yaml` … `_s46.yaml`.
+
+`train` entrena en `R_train` y al terminar evalúa en todas las `R_test` con STFT regenerada. En el ViT, el positional
+embedding se interpola (bicúbica) cuando cambia la cuadrícula de parches; no se actualiza ningún peso.
+
+### 3. Control — entrenar y probar en la misma resolución
+
+```powershell
+python -m scripts.train --config configs/experiments/f1c_vit_train_r32x32.yaml
+python -m scripts.train --config configs/experiments/f1c_vit_train_r96x64.yaml
+python -m scripts.train --config configs/experiments/f1c_vit_train_r128x128.yaml
+```
+
+Sirve para descartar que la caída de la fase 1 sea por falta de información en la resolución de prueba.
+
+### 4. Fase 2 — ViT con fine-tuning
+
+```powershell
+python -m scripts.finetune --config configs/experiments/f2_vit_ft_r32x32.yaml
+python -m scripts.finetune --config configs/experiments/f2_vit_ft_r96x64.yaml
+python -m scripts.finetune --config configs/experiments/f2_vit_ft_r128x128.yaml
+```
+
+Parte de `runs/f1_vit_base_r64/checkpoints/best.pt`, adapta el positional embedding a la resolución objetivo y
+reentrena 20 epochs con lr 1e-4. Requiere haber corrido la fase 1. Acepta `--resume` y `--overwrite`.
+
+### 5. Fase 3 — MSViT sin fine-tuning
+
+```powershell
+python -m scripts.train --config configs/experiments/f3_msvit_base_r64.yaml
+```
+
+Semillas 43–46: `f3_msvit_base_r64_s43.yaml` … `_s46.yaml`. Mismo protocolo, particiones y receta que la fase 1.
+
+### 6. Controles sin reentrenar (usan los `best.pt` existentes)
+
+```powershell
+# a) Redimensionar el espectrograma de R_train en lugar de regenerar la STFT
+python -m scripts.eval_resize --runs f1_vit_base_r64 f3_msvit_base_r64
+python -m scripts.eval_resize --runs f1_vit_base_r64 f3_msvit_base_r64 --mode bicubic    # bilinear | bicubic | nearest
+
+# b) Sensibilidad por eje: redimensionar a (F, T) arbitrarios
+python -m scripts.eval_resize_grid --runs f1_vit_base_r64 f1_vit_base_r64_s43 f3_msvit_base_r64 f3_msvit_base_r64_s43
+python -m scripts.eval_resize_grid --runs ... --sizes 32 48 64 80 96 128
+
+# c) Parche fijo vs parche escalado con la resolución, en ViT y MSViT, con tres tipos de entrada:
+#    STFT regenerada (ventana = n_fft), STFT de ventana fija (resolutions_fixed_window del YAML) y redimensionada
+python -m scripts.eval_scaled_patch --runs f1_vit_base_r64 f1_vit_base_r64_s43 f1_vit_base_r64_s44 f1_vit_base_r64_s45 f1_vit_base_r64_s46 f3_msvit_base_r64 f3_msvit_base_r64_s43 f3_msvit_base_r64_s44 f3_msvit_base_r64_s45 f3_msvit_base_r64_s46
+```
+
+Salida de (c): `runs/<run>/metrics/eval_scaled_patch_bilinear.csv` y la tabla agregada
+`figures/comparison/scaled_patch__summary__mode-bilinear_n_runs-10.csv`.
+
+En (a) y (b) conviene pasar los 10 runs (5 de ViT y 5 de MSViT) para tener media y desviación.
+
+### 7. Agregado entre semillas y comparación
+
+```powershell
+python -m scripts.plot_seeds                    # los 3 modos de interpolación
+python -m scripts.plot_seeds --modes bilinear
+jupyter lab notebooks/comparison.ipynb
+```
+
+`plot_seeds` necesita haber corrido antes `eval_resize` para cada run y modo.
+
+## Resultados (exactitud en prueba, 900 señales, azar = 0.167)
+
+Modelos entrenados en `R64x64` y evaluados sin fine-tuning (media ± desv., 5 semillas por modelo). En `R64x64` todos
+obtienen 0.999 ± 0.001. Tabla completa: `figures/comparison/scaled_patch__summary__mode-bilinear_n_runs-10.csv`.
+
+| Entrada | Prueba | ViT, parche fijo | ViT, parche escalado | MSViT, parche fijo | MSViT, parche escalado |
+|---|---|---|---|---|---|
+| Redimensionada (bilinear) | `R32x32` | 0.143 ± 0.068 | 0.390 ± 0.125 | 0.153 ± 0.056 | 0.488 ± 0.303 |
+| | `R96x64` | 0.159 ± 0.057 | 0.998 ± 0.001 | 0.329 ± 0.164 | 0.998 ± 0.001 |
+| | `R128x128` | 0.162 ± 0.010 | 0.998 ± 0.001 | 0.167 ± 0.000 | 0.998 ± 0.001 |
+| STFT de ventana fija (64) | `R32x32` | 0.143 ± 0.053 | 0.234 ± 0.065 | 0.216 ± 0.070 | 0.497 ± 0.268 |
+| | `R96x64` | 0.118 ± 0.041 | 0.959 ± 0.072 | 0.192 ± 0.025 | 0.974 ± 0.037 |
+| | `R128x64` (solo frecuencia) | 0.167 ± 0.000 | 0.888 ± 0.120 | 0.167 ± 0.000 | 0.901 ± 0.093 |
+| | `R64x128` (solo tiempo) | 0.677 ± 0.064 | 0.998 ± 0.002 | 0.573 ± 0.052 | 0.999 ± 0.001 |
+| | `R128x128` | 0.167 ± 0.000 | 0.880 ± 0.141 | 0.167 ± 0.000 | 0.892 ± 0.117 |
+| STFT regenerada (ventana = n_fft) | `R32x32` | 0.197 ± 0.056 | 0.432 ± 0.119 | 0.239 ± 0.068 | 0.354 ± 0.179 |
+| | `R96x64` | 0.162 ± 0.063 | 0.498 ± 0.115 | 0.187 ± 0.092 | 0.458 ± 0.202 |
+| | `R128x128` | 0.167 ± 0.000 | 0.327 ± 0.101 | 0.167 ± 0.000 | 0.317 ± 0.134 |
+
+Lectura:
+
+- **Con parche fijo ambos modelos colapsan** fuera de `R64x64`, sea cual sea el tipo de entrada. La única excepción
+  parcial es cambiar solo el eje de tiempo (0.57–0.68).
+- **El parche escalado explica la mejora, no la arquitectura:** ViT y MSViT quedan prácticamente iguales cuando ambos
+  lo usan.
+- **Tres niveles de cambio de resolución** (al ampliar, con parche escalado): geométrico 0.998; mismo análisis con
+  otro muestreo (ventana fija) 0.88–0.97; otro compromiso tiempo-frecuencia (ventana = n_fft) 0.32–0.50. Lo que no se
+  transfiere es el cambio de ventana, no el número de píxeles.
+- **Reducir a `R32x32` falla en los tres niveles** (0.23–0.50).
+- **Control (fase 1c):** entrenar y probar en la misma resolución da 0.997–1.000 en las cuatro.
+- **Fine-tuning (fase 2, semilla 42):** 0.998–0.999 en la resolución objetivo; en `R64x64` quedan 0.72 / 0.54 / 0.81.
+
+## Notas sobre MSViT
+
+- Es una **adaptación** de Jiang et al., *Extending the scale generalization of the Vision Transformer without
+  fine-tuning*, Neural Networks 205 (2027) 109446. No hay código oficial. Diferencias: 1 canal (sin YCbCr), tamaño
+  reducido (3 etapas, dims 64/128/256, 3.26 M parámetros), AdamW en lugar de Adan, sin RandAugment/MixUp/CutMix.
+- En el paper el parche es **fijo** y la rejilla de tokens crece con la resolución; así se evalúa por defecto.
+- El **parche escalado** (`model.ref_hw`) es una variante propia: el parche crece con la resolución y se proyecta a
+  los mismos canales DCT, de modo que la rejilla de tokens no cambia. No añade pesos ni requiere reentrenar.
+- El mismo parche escalado existe para el ViT (`src/models/patch_scale.py`), para que la comparación sea justa.
+- **Ventana fija** (`resolutions_fixed_window`): control en el que la STFT conserva la ventana de 64 muestras y solo
+  cambia el muestreo en frecuencia (`n_fft`) y en tiempo (`hop`). Separa "cambio de muestreo" de "cambio de ventana".
+- Al ampliar por redimensionamiento, el parche escalado recupera casi por construcción los tokens originales; el
+  resultado informativo es el de STFT regenerada.
 
 ## Estructura
 
 ```
 configs/preprocess/    datos + resoluciones STFT (fuente única)
 configs/experiments/   un YAML por experimento (el nombre del modelo = experiment.name)
+                       f1_*  ViT base · f1c_*  control por resolución · f2_*  fine-tuning · f3_*  MSViT · _sNN  semilla
 preprocessing/         dataset_loader, splits, stft_generator, explore_stft (+ README con lineamientos)
-src/models/            vit.py (fase 1) · aquí irá msvit.py (fase 3)
+src/models/            vit.py · msvit.py · patch_scale.py (parche escalado del ViT)
 src/training/          trainer (checkpoints reanudables), data, setup
-src/evaluation/        métricas y evaluación por resolución
-scripts/               preprocess, train, evaluate, inspect_manysig, make_synthetic_pkl
-runs/<experimento>/    config_snapshot.yaml, checkpoints/{last,best}.pt, metrics/*.csv, figures/*.png
+src/evaluation/        métricas, evaluación por resolución y de fine-tuning
+scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_resize_grid, eval_scaled_patch,
+                       plot_seeds, inspect_manysig, make_synthetic_pkl
+runs/<experimento>/    config_snapshot.yaml, checkpoints/{last,best}.pt, metrics/*.csv, figures/*.png  (no versionado)
+figures/               exploration/ y comparison/ (figuras y tablas agregadas)
 notebooks/             comparison.ipynb (solo comparaciones)
 ```
 
