@@ -151,21 +151,35 @@ jupyter lab notebooks/comparison.ipynb
 
 ## Resultados (exactitud en prueba, 900 señales, azar = 0.167)
 
-Entrenados en `R64x64`, evaluados sin fine-tuning con STFT regenerada (media ± desv., 5 semillas):
+Modelos entrenados en `R64x64` y evaluados sin fine-tuning (media ± desv., 5 semillas por modelo). En `R64x64` todos
+obtienen 0.999 ± 0.001. Tabla completa: `figures/comparison/scaled_patch__summary__mode-bilinear_n_runs-10.csv`.
 
-| Prueba | ViT | MSViT, parche fijo | MSViT, parche escalado |
-|---|---|---|---|
-| `R64x64` | 0.999 ± 0.001 | 0.999 ± 0.001 | 0.999 ± 0.001 |
-| `R32x32` | 0.197 ± 0.056 | 0.239 ± 0.068 | 0.354 ± 0.179 |
-| `R96x64` | 0.162 ± 0.063 | 0.187 ± 0.092 | 0.458 ± 0.202 |
-| `R128x128` | 0.167 ± 0.000 | 0.167 ± 0.000 | 0.317 ± 0.134 |
+| Entrada | Prueba | ViT, parche fijo | ViT, parche escalado | MSViT, parche fijo | MSViT, parche escalado |
+|---|---|---|---|---|---|
+| Redimensionada (bilinear) | `R32x32` | 0.143 ± 0.068 | 0.390 ± 0.125 | 0.153 ± 0.056 | 0.488 ± 0.303 |
+| | `R96x64` | 0.159 ± 0.057 | 0.998 ± 0.001 | 0.329 ± 0.164 | 0.998 ± 0.001 |
+| | `R128x128` | 0.162 ± 0.010 | 0.998 ± 0.001 | 0.167 ± 0.000 | 0.998 ± 0.001 |
+| STFT de ventana fija (64) | `R32x32` | 0.143 ± 0.053 | 0.234 ± 0.065 | 0.216 ± 0.070 | 0.497 ± 0.268 |
+| | `R96x64` | 0.118 ± 0.041 | 0.959 ± 0.072 | 0.192 ± 0.025 | 0.974 ± 0.037 |
+| | `R128x64` (solo frecuencia) | 0.167 ± 0.000 | 0.888 ± 0.120 | 0.167 ± 0.000 | 0.901 ± 0.093 |
+| | `R64x128` (solo tiempo) | 0.677 ± 0.064 | 0.998 ± 0.002 | 0.573 ± 0.052 | 0.999 ± 0.001 |
+| | `R128x128` | 0.167 ± 0.000 | 0.880 ± 0.141 | 0.167 ± 0.000 | 0.892 ± 0.117 |
+| STFT regenerada (ventana = n_fft) | `R32x32` | 0.197 ± 0.056 | 0.432 ± 0.119 | 0.239 ± 0.068 | 0.354 ± 0.179 |
+| | `R96x64` | 0.162 ± 0.063 | 0.498 ± 0.115 | 0.187 ± 0.092 | 0.458 ± 0.202 |
+| | `R128x128` | 0.167 ± 0.000 | 0.327 ± 0.101 | 0.167 ± 0.000 | 0.317 ± 0.134 |
 
-- **Control (fase 1c):** entrenar y probar en la misma resolución da 0.997–1.000 en las cuatro. La información está
-  presente; lo que falla es la transferencia.
+Lectura:
+
+- **Con parche fijo ambos modelos colapsan** fuera de `R64x64`, sea cual sea el tipo de entrada. La única excepción
+  parcial es cambiar solo el eje de tiempo (0.57–0.68).
+- **El parche escalado explica la mejora, no la arquitectura:** ViT y MSViT quedan prácticamente iguales cuando ambos
+  lo usan.
+- **Tres niveles de cambio de resolución** (al ampliar, con parche escalado): geométrico 0.998; mismo análisis con
+  otro muestreo (ventana fija) 0.88–0.97; otro compromiso tiempo-frecuencia (ventana = n_fft) 0.32–0.50. Lo que no se
+  transfiere es el cambio de ventana, no el número de píxeles.
+- **Reducir a `R32x32` falla en los tres niveles** (0.23–0.50).
+- **Control (fase 1c):** entrenar y probar en la misma resolución da 0.997–1.000 en las cuatro.
 - **Fine-tuning (fase 2, semilla 42):** 0.998–0.999 en la resolución objetivo; en `R64x64` quedan 0.72 / 0.54 / 0.81.
-- **Redimensionamiento (bilinear) con MSViT:** parche fijo 0.153 / 0.329 / 0.167 y parche escalado 0.488 / 0.998 / 0.998
-  en `R32x32` / `R96x64` / `R128x128`.
-- **Por eje:** cambiar solo T conserva 0.64–0.83 en el ViT; cambiar F colapsa ambos modelos.
 
 ## Notas sobre MSViT
 
