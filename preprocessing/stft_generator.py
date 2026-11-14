@@ -28,8 +28,13 @@ def _window(name, n, device, dtype):
 def compute_spectrograms(iq, n_fft, win_len, hop, window="hann",
                          log_scale=True, normalize=True, eps=1e-10):
     """iq: (B, N, 2) float -> (B, F, T) float32."""
+    dec = 1
     if win_len > n_fft:
-        raise ValueError("win_len debe ser <= n_fft")
+        # Ventana más larga que el nº de bins pedido: se calcula la FFT de win_len puntos y se toma 1 de cada
+        # `dec` bins (el mismo espectro, muestreado más grueso). Solo para el control de ventana fija.
+        if win_len % n_fft:
+            raise ValueError("si win_len > n_fft, win_len debe ser múltiplo de n_fft")
+        dec = win_len // n_fft
     iq = iq.float()
     B, N, _ = iq.shape
     pad = win_len // 2
@@ -40,7 +45,7 @@ def compute_spectrograms(iq, n_fft, win_len, hop, window="hann",
     frames = x.unfold(-1, win_len, hop)[:, :T]                  # (B, T, win_len)
     w = _window(window, win_len, iq.device, iq.dtype)
     frames = frames * w
-    spec = torch.fft.fft(frames, n=n_fft, dim=-1)               # (B, T, n_fft)
+    spec = torch.fft.fft(frames, n=n_fft * dec, dim=-1)[..., ::dec]   # (B, T, n_fft)
     spec = torch.fft.fftshift(spec, dim=-1)
     power = spec.real ** 2 + spec.imag ** 2
     out = power.transpose(1, 2).contiguous()                    # (B, F, T)
@@ -67,6 +72,12 @@ if __name__ == "__main__":
         expected = nf // 2 + round(f0 * nf)
         assert abs(peak - expected) <= 1, (name, peak, expected)
         print(f"{name}: shape={tuple(s.shape[1:])} pico_bin={peak} esperado={expected}  OK")
+    # Ventana fija en 64: mismas formas y mismo pico; solo cambia el muestreo del espectro y del tiempo.
+    for name, (nf, hp) in {"W64_R32x32": (32, 8), "W64_R96x64": (96, 4), "W64_R128x128": (128, 2)}.items():
+        s = compute_spectrograms(tone, nf, 64, hp, normalize=False)
+        assert tuple(s.shape[1:]) == resolution_shape(N, nf, hp), (name, s.shape)
+        assert abs(int(s[0].mean(dim=1).argmax()) - (nf // 2 + round(f0 * nf))) <= 1, name
+        print(f"{name}: shape={tuple(s.shape[1:])} (ventana 64)  OK")
     z = compute_spectrograms(torch.randn(4, N, 2), 64, 64, 4)
     assert abs(float(z.mean())) < 1e-4 and abs(float(z.std(dim=(1, 2)).mean()) - 1) < 1e-3
     print("normalización por muestra OK")

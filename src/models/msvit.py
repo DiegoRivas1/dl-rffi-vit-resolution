@@ -16,7 +16,7 @@ y escala 1/sqrt(d_head) en los logits (el texto del paper no la menciona).
 VARIANTE PROPIA (no está en el paper): parche escalado con la resolución. El paper usa parche FIJO (4x4 u 8x8) y deja
 crecer la rejilla de tokens; ese es el comportamiento por defecto aquí (ref_hw = None). Si se fija model.ref_hw = (H, W)
 de entrenamiento, el parche del stem escala con la entrada y la rejilla de tokens se mantiene (ver SCConv.scaled_basis
-y scripts/eval_msvit_scale.py). No añade pesos: los best.pt existentes se usan tal cual.
+y scripts/eval_scaled_patch.py). No añade pesos: los best.pt existentes se usan tal cual.
 """
 import math
 import torch

@@ -58,6 +58,7 @@ python -m preprocessing.dataset_loader
 python -m preprocessing.splits
 python -m src.models.vit                    # incluye la interpolación del positional embedding
 python src/models/msvit.py                  # DCT, SC-Conv fusionada, Toeplitz, HVSA, parche escalado
+python src/models/patch_scale.py            # reescalado de un kernel de parche en el dominio DCT (ViT)
 ```
 
 ### 1. Preprocesamiento
@@ -128,9 +129,13 @@ python -m scripts.eval_resize --runs f1_vit_base_r64 f3_msvit_base_r64 --mode bi
 python -m scripts.eval_resize_grid --runs f1_vit_base_r64 f1_vit_base_r64_s43 f3_msvit_base_r64 f3_msvit_base_r64_s43
 python -m scripts.eval_resize_grid --runs ... --sizes 32 48 64 80 96 128
 
-# c) MSViT con parche fijo vs parche escalado con la resolución
-python -m scripts.eval_msvit_scale --runs f3_msvit_base_r64 f3_msvit_base_r64_s43 f3_msvit_base_r64_s44 f3_msvit_base_r64_s45 f3_msvit_base_r64_s46
+# c) Parche fijo vs parche escalado con la resolución, en ViT y MSViT, con tres tipos de entrada:
+#    STFT regenerada (ventana = n_fft), STFT de ventana fija (resolutions_fixed_window del YAML) y redimensionada
+python -m scripts.eval_scaled_patch --runs f1_vit_base_r64 f1_vit_base_r64_s43 f1_vit_base_r64_s44 f1_vit_base_r64_s45 f1_vit_base_r64_s46 f3_msvit_base_r64 f3_msvit_base_r64_s43 f3_msvit_base_r64_s44 f3_msvit_base_r64_s45 f3_msvit_base_r64_s46
 ```
+
+Salida de (c): `runs/<run>/metrics/eval_scaled_patch_bilinear.csv` y la tabla agregada
+`figures/comparison/scaled_patch__summary__mode-bilinear_n_runs-10.csv`.
 
 En (a) y (b) conviene pasar los 10 runs (5 de ViT y 5 de MSViT) para tener media y desviación.
 
@@ -170,6 +175,9 @@ Entrenados en `R64x64`, evaluados sin fine-tuning con STFT regenerada (media ± 
 - En el paper el parche es **fijo** y la rejilla de tokens crece con la resolución; así se evalúa por defecto.
 - El **parche escalado** (`model.ref_hw`) es una variante propia: el parche crece con la resolución y se proyecta a
   los mismos canales DCT, de modo que la rejilla de tokens no cambia. No añade pesos ni requiere reentrenar.
+- El mismo parche escalado existe para el ViT (`src/models/patch_scale.py`), para que la comparación sea justa.
+- **Ventana fija** (`resolutions_fixed_window`): control en el que la STFT conserva la ventana de 64 muestras y solo
+  cambia el muestreo en frecuencia (`n_fft`) y en tiempo (`hop`). Separa "cambio de muestreo" de "cambio de ventana".
 - Al ampliar por redimensionamiento, el parche escalado recupera casi por construcción los tokens originales; el
   resultado informativo es el de STFT regenerada.
 
@@ -180,10 +188,10 @@ configs/preprocess/    datos + resoluciones STFT (fuente única)
 configs/experiments/   un YAML por experimento (el nombre del modelo = experiment.name)
                        f1_*  ViT base · f1c_*  control por resolución · f2_*  fine-tuning · f3_*  MSViT · _sNN  semilla
 preprocessing/         dataset_loader, splits, stft_generator, explore_stft (+ README con lineamientos)
-src/models/            vit.py · msvit.py
+src/models/            vit.py · msvit.py · patch_scale.py (parche escalado del ViT)
 src/training/          trainer (checkpoints reanudables), data, setup
 src/evaluation/        métricas, evaluación por resolución y de fine-tuning
-scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_resize_grid, eval_msvit_scale,
+scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_resize_grid, eval_scaled_patch,
                        plot_seeds, inspect_manysig, make_synthetic_pkl
 runs/<experimento>/    config_snapshot.yaml, checkpoints/{last,best}.pt, metrics/*.csv, figures/*.png  (no versionado)
 figures/               exploration/ y comparison/ (figuras y tablas agregadas)

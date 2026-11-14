@@ -31,3 +31,13 @@ resolutions:
   R64x64:   {n_fft: 64,  win_len: 64,  hop: 4}
   R96x64:   {n_fft: 96,  win_len: 96,  hop: 4}
   R128x128: {n_fft: 128, win_len: 128, hop: 2}
+
+# CONTROL de ventana fija (solo evaluación, scripts.eval_scaled_patch): la ventana se queda en 64 como en
+# R64x64 y solo cambia el muestreo. Más bins = zero-padding de la FFT (o 1 de cada 2 bins para F=32); más
+# frames = hop más corto. Así la imagen es la de entrenamiento remuestreada, no otro compromiso tiempo-frecuencia.
+resolutions_fixed_window:
+  W64_R32x32:   {n_fft: 32,  win_len: 64, hop: 8}
+  W64_R96x64:   {n_fft: 96,  win_len: 64, hop: 4}
+  W64_R128x128: {n_fft: 128, win_len: 64, hop: 2}
+  W64_R128x64:  {n_fft: 128, win_len: 64, hop: 4}    # solo cambia la frecuencia
+  W64_R64x128:  {n_fft: 64,  win_len: 64, hop: 2}    # solo cambia el tiempo
