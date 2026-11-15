@@ -13,7 +13,7 @@ cuando la resolución de prueba cambia, **sin fine-tuning**? ¿Lo mejora una arq
 | 2 | ViT + fine-tuning en `R_test` (cota de adaptación; se reporta aparte) | hecha (1 semilla) |
 | 3 | MSViT adaptado (SC-Conv, HVSA, RepCPE; Jiang et al.) sin fine-tuning | hecha (5 semillas) |
 | 3b | Controles: redimensionamiento, sensibilidad por eje, parche escalado, ventana fija, barrido de ventana | hecha |
-| 4 | Robustez: otros receptores y fechas; réplica con 12 receptores y fecha de prueba no vista | en curso |
+| 4 | Robustez: otros receptores y fechas; réplica con 12 receptores y fecha de prueba no vista | hecha (3 semillas) |
 
 ## Datos y resoluciones
 
@@ -208,6 +208,47 @@ Lectura:
 - **Reducir a `R32x32` falla en los tres niveles** (0.23–0.50).
 - **Control (fase 1c):** entrenar y probar en la misma resolución da 0.997–1.000 en las cuatro.
 - **Fine-tuning (fase 2, semilla 42):** 0.998–0.999 en la resolución objetivo; en `R64x64` quedan 0.72 / 0.54 / 0.81.
+
+### Fase 4 — robustez
+
+**a) Modelos de 1 receptor / 1 fecha probados en otras condiciones** (en `R64x64`, 5 semillas por modelo):
+
+| Condición de prueba | ViT | MSViT |
+|---|---|---|
+| Celda de entrenamiento (señales de prueba) | 0.999 ± 0.001 | 0.999 ± 0.001 |
+| Mismo receptor, otras 3 fechas | 0.518 ± 0.035 | 0.514 ± 0.042 |
+| Otros 11 receptores, misma fecha | 0.275 ± 0.018 | 0.277 ± 0.024 |
+
+El ~100 % de las fases 1–3 es específico del receptor y del día de entrenamiento.
+
+**b) Réplica con 12 receptores, 3 fechas de entrenamiento y una fecha de prueba no vista** (3 semillas por modelo;
+validación 0.99, prueba en `R64x64`: ViT 0.906 ± 0.012, MSViT 0.904 ± 0.010). Tabla completa:
+`figures/comparison/scaled_patch__summary__mode-bilinear_n_runs-6.csv`.
+
+| Entrada | Prueba | ViT, parche fijo | ViT, parche escalado | MSViT, parche fijo | MSViT, parche escalado |
+|---|---|---|---|---|---|
+| Redimensionada (bilinear) | `R32x32` | 0.167 ± 0.021 | 0.299 ± 0.032 | 0.182 ± 0.044 | 0.422 ± 0.046 |
+| | `R96x64` | 0.163 ± 0.021 | 0.741 ± 0.020 | 0.232 ± 0.055 | 0.863 ± 0.005 |
+| | `R128x128` | 0.166 ± 0.009 | 0.768 ± 0.027 | 0.178 ± 0.050 | 0.862 ± 0.011 |
+| STFT de ventana fija (64) | `R32x32` | 0.146 ± 0.041 | 0.248 ± 0.055 | 0.201 ± 0.035 | 0.536 ± 0.021 |
+| | `R96x64` | 0.172 ± 0.023 | 0.378 ± 0.064 | 0.225 ± 0.053 | 0.438 ± 0.002 |
+| | `R128x64` (solo frecuencia) | 0.173 ± 0.009 | 0.337 ± 0.043 | 0.199 ± 0.058 | 0.361 ± 0.008 |
+| | `R64x128` (solo tiempo) | 0.358 ± 0.031 | 0.902 ± 0.013 | 0.468 ± 0.032 | 0.890 ± 0.018 |
+| | `R128x128` | 0.144 ± 0.014 | 0.342 ± 0.032 | 0.151 ± 0.048 | 0.353 ± 0.004 |
+| STFT regenerada (ventana = n_fft) | `R32x32` | 0.176 ± 0.011 | 0.204 ± 0.007 | 0.227 ± 0.061 | 0.303 ± 0.028 |
+| | `R96x64` | 0.210 ± 0.038 | 0.282 ± 0.042 | 0.250 ± 0.038 | 0.383 ± 0.044 |
+| | `R128x128` | 0.190 ± 0.039 | 0.253 ± 0.040 | 0.206 ± 0.055 | 0.249 ± 0.043 |
+
+Barrido de ventana a 64×64 (`window_sweep__summary__n_runs-6.csv`): ventana 48 → ViT 0.547 / MSViT 0.804;
+56 → 0.789 / 0.861; 64 → 0.906 / 0.904; 72 → 0.859 / 0.886; 80 → 0.567 / 0.713; 96 → 0.330 / 0.472; 128 → 0.236 / 0.356.
+
+Qué se mantiene y qué cambia respecto al escenario de 1 receptor / 1 fecha:
+
+- **Se mantiene:** con parche fijo ambos modelos colapsan al cambiar la resolución; el parche escalado recupera el
+  cambio geométrico y el cambio en el eje de tiempo; el cambio de ventana sigue sin resolverse.
+- **Cambia:** el remuestreo en frecuencia con ventana fija ya no se recupera (0.34–0.44 frente a 0.88–0.97), y el
+  MSViT pasa a ser más robusto que el ViT (redimensionamiento con parche escalado 0.86 frente a 0.74–0.77; mayor
+  tolerancia a la ventana en todo el barrido).
 
 ## Notas sobre MSViT
 
