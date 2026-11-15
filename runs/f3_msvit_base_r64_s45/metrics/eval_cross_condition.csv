@@ -1,0 +1,16 @@
+experiment,model,seed,condicion,rx,fecha,accuracy
+f3_msvit_base_r64_s45,msvit,45,celda de entrenamiento (prueba),1-1,2021_03_01,0.9988888888888889
+f3_msvit_base_r64_s45,msvit,45,"mismo receptor, otra fecha",1-1,2021_03_08,0.652
+f3_msvit_base_r64_s45,msvit,45,"mismo receptor, otra fecha",1-1,2021_03_15,0.42933333333333334
+f3_msvit_base_r64_s45,msvit,45,"mismo receptor, otra fecha",1-1,2021_03_23,0.6186666666666667
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",1-19,2021_03_01,0.4073333333333333
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",14-7,2021_03_01,0.29333333333333333
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",18-2,2021_03_01,0.19733333333333333
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",19-2,2021_03_01,0.364
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",2-1,2021_03_01,0.14266666666666666
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",2-19,2021_03_01,0.16066666666666668
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",20-1,2021_03_01,0.2693333333333333
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",3-19,2021_03_01,0.43133333333333335
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",7-14,2021_03_01,0.2886666666666667
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",7-7,2021_03_01,0.348
+f3_msvit_base_r64_s45,msvit,45,"otro receptor, misma fecha",8-8,2021_03_01,0.14933333333333335

@@ -76,7 +76,7 @@ Salidas: `data/processed/<nombre>_subset.npz` y `_splits.npz`; figura
 
 Sin el pkl de 2.3 GB se puede probar el pipeline con `python -m scripts.make_synthetic_pkl`.
 
-### 2. Fase 1 — ViT sin fine-tuning
+### 2. Fase 1 : ViT sin fine-tuning
 
 ```powershell
 python -m scripts.train --config configs/experiments/f1_vit_base_r64.yaml
@@ -90,7 +90,7 @@ Semillas 43–46: mismos comandos con `f1_vit_base_r64_s43.yaml` … `_s46.yaml`
 `train` entrena en `R_train` y al terminar evalúa en todas las `R_test` con STFT regenerada. En el ViT, el positional
 embedding se interpola (bicúbica) cuando cambia la cuadrícula de parches; no se actualiza ningún peso.
 
-### 3. Control — entrenar y probar en la misma resolución
+### 3. Control : entrenar y probar en la misma resolución
 
 ```powershell
 python -m scripts.train --config configs/experiments/f1c_vit_train_r32x32.yaml
@@ -100,7 +100,7 @@ python -m scripts.train --config configs/experiments/f1c_vit_train_r128x128.yaml
 
 Sirve para descartar que la caída de la fase 1 sea por falta de información en la resolución de prueba.
 
-### 4. Fase 2 — ViT con fine-tuning
+### 4. Fase 2 : ViT con fine-tuning
 
 ```powershell
 python -m scripts.finetune --config configs/experiments/f2_vit_ft_r32x32.yaml
@@ -111,7 +111,7 @@ python -m scripts.finetune --config configs/experiments/f2_vit_ft_r128x128.yaml
 Parte de `runs/f1_vit_base_r64/checkpoints/best.pt`, adapta el positional embedding a la resolución objetivo y
 reentrena 20 epochs con lr 1e-4. Requiere haber corrido la fase 1. Acepta `--resume` y `--overwrite`.
 
-### 5. Fase 3 — MSViT sin fine-tuning
+### 5. Fase 3 : MSViT sin fine-tuning
 
 ```powershell
 python -m scripts.train --config configs/experiments/f3_msvit_base_r64.yaml
@@ -157,7 +157,7 @@ jupyter lab notebooks/comparison.ipynb
 
 `plot_seeds` necesita haber corrido antes `eval_resize` para cada run y modo.
 
-### 8. Fase 4 — robustez con más receptores y fechas
+### 8. Fase 4 : robustez con más receptores y fechas
 
 ```powershell
 # a) Sin reentrenar: los modelos de 1 receptor / 1 fecha, probados en otras fechas y otros receptores (en R64x64)
