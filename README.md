@@ -134,6 +134,13 @@ python -m scripts.eval_resize_grid --runs ... --sizes 32 48 64 80 96 128
 python -m scripts.eval_scaled_patch --runs f1_vit_base_r64 f1_vit_base_r64_s43 f1_vit_base_r64_s44 f1_vit_base_r64_s45 f1_vit_base_r64_s46 f3_msvit_base_r64 f3_msvit_base_r64_s43 f3_msvit_base_r64_s44 f3_msvit_base_r64_s45 f3_msvit_base_r64_s46
 ```
 
+```powershell
+# d) Barrido de ventana: imagen siempre 64x64 (mismo n_fft y hop); solo cambia la longitud de la ventana STFT
+python -m scripts.eval_window_sweep --runs f1_vit_base_r64 f1_vit_base_r64_s43 f1_vit_base_r64_s44 f1_vit_base_r64_s45 f1_vit_base_r64_s46 f3_msvit_base_r64 f3_msvit_base_r64_s43 f3_msvit_base_r64_s44 f3_msvit_base_r64_s45 f3_msvit_base_r64_s46
+```
+
+Salida de (d): `figures/comparison/window_sweep__acc_vs_window__n_runs-10.png` y su tabla `window_sweep__summary__n_runs-10.csv`.
+
 Salida de (c): `runs/<run>/metrics/eval_scaled_patch_bilinear.csv` y la tabla agregada
 `figures/comparison/scaled_patch__summary__mode-bilinear_n_runs-10.csv`.
 
@@ -205,9 +212,9 @@ preprocessing/         dataset_loader, splits, stft_generator, explore_stft (+ R
 src/models/            vit.py · msvit.py · patch_scale.py (parche escalado del ViT)
 src/training/          trainer (checkpoints reanudables), data, setup
 src/evaluation/        métricas, evaluación por resolución y de fine-tuning
-scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_resize_grid, eval_scaled_patch,
+scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_resize_grid, eval_scaled_patch, eval_window_sweep,
                        plot_seeds, inspect_manysig, make_synthetic_pkl
-runs/<experimento>/    config_snapshot.yaml, checkpoints/{last,best}.pt, metrics/*.csv, figures/*.png  (no versionado)
+runs/<experimento>/    config_snapshot.yaml, metrics/*.csv, figures/*.png  (versionados) · checkpoints/{last,best}.pt (no)
 figures/               exploration/ y comparison/ (figuras y tablas agregadas)
 notebooks/             comparison.ipynb (solo comparaciones)
 ```
