@@ -12,7 +12,8 @@ cuando la resolución de prueba cambia, **sin fine-tuning**? ¿Lo mejora una arq
 | 1c | Control: ViT entrenado y probado en la misma resolución | hecha |
 | 2 | ViT + fine-tuning en `R_test` (cota de adaptación; se reporta aparte) | hecha (1 semilla) |
 | 3 | MSViT adaptado (SC-Conv, HVSA, RepCPE; Jiang et al.) sin fine-tuning | hecha (5 semillas) |
-| 3b | Controles de MSViT: redimensionamiento, sensibilidad por eje, parche escalado | hecha |
+| 3b | Controles: redimensionamiento, sensibilidad por eje, parche escalado, ventana fija, barrido de ventana | hecha |
+| 4 | Robustez: otros receptores y fechas; réplica con 12 receptores y fecha de prueba no vista | en curso |
 
 ## Datos y resoluciones
 
@@ -156,6 +157,26 @@ jupyter lab notebooks/comparison.ipynb
 
 `plot_seeds` necesita haber corrido antes `eval_resize` para cada run y modo.
 
+### 8. Fase 4 — robustez con más receptores y fechas
+
+```powershell
+# a) Sin reentrenar: los modelos de 1 receptor / 1 fecha, probados en otras fechas y otros receptores (en R64x64)
+python -m scripts.eval_cross_condition --runs f1_vit_base_r64 f1_vit_base_r64_s43 f1_vit_base_r64_s44 f1_vit_base_r64_s45 f1_vit_base_r64_s46 f3_msvit_base_r64 f3_msvit_base_r64_s43 f3_msvit_base_r64_s44 f3_msvit_base_r64_s45 f3_msvit_base_r64_s46
+
+# b) Réplica: 12 receptores, entrenamiento en 3 fechas y prueba en una fecha no vista
+python -m scripts.preprocess --config configs/preprocess/manysig_eq1_multi.yaml
+python -m scripts.train --config configs/experiments/f4_vit_multi_r64.yaml        # y _s43, _s44
+python -m scripts.train --config configs/experiments/f4_msvit_multi_r64.yaml      # y _s43, _s44
+
+# c) Mismos controles que en la sección 6, sobre los modelos de la fase 4
+python -m scripts.eval_scaled_patch --runs f4_vit_multi_r64 f4_vit_multi_r64_s43 f4_vit_multi_r64_s44 f4_msvit_multi_r64 f4_msvit_multi_r64_s43 f4_msvit_multi_r64_s44
+python -m scripts.eval_window_sweep --runs f4_vit_multi_r64 f4_vit_multi_r64_s43 f4_vit_multi_r64_s44 f4_msvit_multi_r64 f4_msvit_multi_r64_s43 f4_msvit_multi_r64_s44
+```
+
+(a) mide cuánto del ~100 % depende del receptor y del día de entrenamiento. (b) y (c) repiten el estudio de
+resolución en un escenario donde la prueba es un día que el modelo nunca vio (72 000 señales: 6 Tx × 12 Rx × 4 fechas
+× 250; la última fecha completa es la prueba).
+
 ## Resultados (exactitud en prueba, 900 señales, azar = 0.167)
 
 Modelos entrenados en `R64x64` y evaluados sin fine-tuning (media ± desv., 5 semillas por modelo). En `R64x64` todos
@@ -207,12 +228,12 @@ Lectura:
 ```
 configs/preprocess/    datos + resoluciones STFT (fuente única)
 configs/experiments/   un YAML por experimento (el nombre del modelo = experiment.name)
-                       f1_*  ViT base · f1c_*  control por resolución · f2_*  fine-tuning · f3_*  MSViT · _sNN  semilla
+                       f1_*  ViT base · f1c_*  control por resolución · f2_*  fine-tuning · f3_*  MSViT · f4_*  robustez · _sNN  semilla
 preprocessing/         dataset_loader, splits, stft_generator, explore_stft (+ README con lineamientos)
 src/models/            vit.py · msvit.py · patch_scale.py (parche escalado del ViT)
 src/training/          trainer (checkpoints reanudables), data, setup
 src/evaluation/        métricas, evaluación por resolución y de fine-tuning
-scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_resize_grid, eval_scaled_patch, eval_window_sweep,
+scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_resize_grid, eval_scaled_patch, eval_window_sweep, eval_cross_condition,
                        plot_seeds, inspect_manysig, make_synthetic_pkl
 runs/<experimento>/    config_snapshot.yaml, metrics/*.csv, figures/*.png  (versionados) · checkpoints/{last,best}.pt (no)
 figures/               exploration/ y comparison/ (figuras y tablas agregadas)

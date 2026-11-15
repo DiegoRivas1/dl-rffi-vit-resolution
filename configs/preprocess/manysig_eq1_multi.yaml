@@ -1,0 +1,44 @@
+# Preprocesamiento de la FASE 4 (robustez): todos los receptores y todas las fechas de WiSig ManySig.
+# La última fecha se reserva COMPLETA para prueba: el modelo se evalúa en un día que nunca vio, así que la
+# exactitud ya no depende de una partición aleatoria dentro de un solo receptor y un solo día.
+name: manysig_eq1_allrx_holdout-lastdate
+
+dataset:
+  pkl_path: data/raw/ManySig.pkl
+  equalized: 1
+  tx_list: null                       # los 6 transmisores
+  rx_list: null                       # los 12 receptores
+  date_list: null                     # las 4 fechas
+  n_per_cell: 250                     # señales por (Tx, Rx, fecha): 6 x 12 x 4 x 250 = 72 000
+
+split:
+  strategy: holdout_date
+  holdout_dates: 1                    # nº de fechas finales reservadas para prueba
+  val: 0.15                           # fracción de las fechas de entrenamiento usada para validación
+  seed: 42
+
+stft:
+  signal_len: 256
+  window: hann
+  log_scale: true          # 10*log10(|X|^2 + eps)
+  normalize: per_sample    # z-score por muestra: no usa estadísticas del conjunto de prueba
+  patch_size_check: 8      # solo para avisar si F o T no son múltiplos del parche
+
+# Resoluciones definidas por PARÁMETROS DE GENERACIÓN (no por resize).
+# Forma resultante: F = n_fft (altura, frecuencia), T = signal_len // hop (ancho, tiempo).
+# CANDIDATAS: confirmar con `python -m preprocessing.explore_stft` antes de fijarlas.
+resolutions:
+  R32x32:   {n_fft: 32,  win_len: 32,  hop: 8}
+  R64x64:   {n_fft: 64,  win_len: 64,  hop: 4}
+  R96x64:   {n_fft: 96,  win_len: 96,  hop: 4}
+  R128x128: {n_fft: 128, win_len: 128, hop: 2}
+
+# CONTROL de ventana fija (solo evaluación, scripts.eval_scaled_patch): la ventana se queda en 64 como en
+# R64x64 y solo cambia el muestreo. Más bins = zero-padding de la FFT (o 1 de cada 2 bins para F=32); más
+# frames = hop más corto. Así la imagen es la de entrenamiento remuestreada, no otro compromiso tiempo-frecuencia.
+resolutions_fixed_window:
+  W64_R32x32:   {n_fft: 32,  win_len: 64, hop: 8}
+  W64_R96x64:   {n_fft: 96,  win_len: 64, hop: 4}
+  W64_R128x128: {n_fft: 128, win_len: 64, hop: 2}
+  W64_R128x64:  {n_fft: 128, win_len: 64, hop: 4}    # solo cambia la frecuencia
+  W64_R64x128:  {n_fft: 64,  win_len: 64, hop: 2}    # solo cambia el tiempo
