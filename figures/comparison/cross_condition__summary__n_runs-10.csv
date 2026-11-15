@@ -1,0 +1,7 @@
+condicion,model,mean,std,count
+celda de entrenamiento (prueba),msvit,0.9987,0.0009,5
+celda de entrenamiento (prueba),vit,0.9989,0.0008,5
+"mismo receptor, otra fecha",msvit,0.5139,0.0419,5
+"mismo receptor, otra fecha",vit,0.5176,0.0351,5
+"otro receptor, misma fecha",msvit,0.277,0.0238,5
+"otro receptor, misma fecha",vit,0.2751,0.018,5

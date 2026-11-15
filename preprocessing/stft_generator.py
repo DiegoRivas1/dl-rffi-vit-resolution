@@ -30,11 +30,10 @@ def compute_spectrograms(iq, n_fft, win_len, hop, window="hann",
     """iq: (B, N, 2) float -> (B, F, T) float32."""
     dec = 1
     if win_len > n_fft:
-        # Ventana más larga que el nº de bins pedido: se calcula la FFT de win_len puntos y se toma 1 de cada
-        # `dec` bins (el mismo espectro, muestreado más grueso). Solo para el control de ventana fija.
-        if win_len % n_fft:
-            raise ValueError("si win_len > n_fft, win_len debe ser múltiplo de n_fft")
-        dec = win_len // n_fft
+        # Ventana más larga que el nº de bins pedido: se calcula una FFT de n_fft*dec >= win_len puntos y se toma
+        # 1 de cada `dec` bins (el mismo espectro, muestreado en las n_fft frecuencias k/n_fft). Solo para los
+        # controles de ventana (ventana fija y barrido de ventana).
+        dec = -(-win_len // n_fft)
     iq = iq.float()
     B, N, _ = iq.shape
     pad = win_len // 2
@@ -78,6 +77,11 @@ if __name__ == "__main__":
         assert tuple(s.shape[1:]) == resolution_shape(N, nf, hp), (name, s.shape)
         assert abs(int(s[0].mean(dim=1).argmax()) - (nf // 2 + round(f0 * nf))) <= 1, name
         print(f"{name}: shape={tuple(s.shape[1:])} (ventana 64)  OK")
+    # Barrido de ventana: la imagen sigue siendo 64x64 y el tono cae en el mismo bin con cualquier ventana.
+    for wl in (32, 48, 56, 64, 72, 96, 128):
+        s = compute_spectrograms(tone, 64, wl, 4, normalize=False)
+        assert tuple(s.shape[1:]) == (64, 64) and abs(int(s[0].mean(dim=1).argmax()) - 40) <= 1, wl
+    print("barrido de ventana 32..128 a 64x64: OK")
     z = compute_spectrograms(torch.randn(4, N, 2), 64, 64, 4)
     assert abs(float(z.mean())) < 1e-4 and abs(float(z.std(dim=(1, 2)).mean()) - 1) < 1e-3
     print("normalización por muestra OK")

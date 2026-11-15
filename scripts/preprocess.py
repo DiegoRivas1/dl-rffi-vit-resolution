@@ -5,7 +5,7 @@
 import argparse
 import numpy as np
 from preprocessing.dataset_loader import load_manysig, build_subset, save_subset
-from preprocessing.splits import stratified_split, save_splits
+from preprocessing.splits import stratified_split, holdout_date_split, save_splits
 from src.training.setup import processed_paths
 from src.utils.config import load_config
 
@@ -22,7 +22,15 @@ def main():
     d = pre.dataset
     sub = build_subset(data, d.equalized, d.tx_list, d.rx_list, d.date_list, d.n_per_cell)
     assert sub["X"].shape[1:] == (pre.stft.signal_len, 2), sub["X"].shape
-    spl = stratified_split(sub["y"], pre.split.train, pre.split.val, pre.split.test, pre.split.seed)
+    if pre.split.get("strategy", "random") == "holdout_date":
+        # Las últimas `holdout_dates` fechas de la selección se reservan completas para prueba.
+        used = sorted(set(sub["date_id"].tolist()))
+        hold = used[-int(pre.split.holdout_dates):]
+        spl = holdout_date_split(sub["y"], sub["date_id"], hold, pre.split.val, pre.split.seed)
+        print("Fechas de entrenamiento:", [str(sub["date_names"][i]) for i in used if i not in hold],
+              "| fechas de prueba:", [str(sub["date_names"][i]) for i in hold])
+    else:
+        spl = stratified_split(sub["y"], pre.split.train, pre.split.val, pre.split.test, pre.split.seed)
     p_sub, p_spl = processed_paths(pre)
     save_subset(sub, p_sub); save_splits(spl, p_spl)
     print(f"Subconjunto: X{sub['X'].shape}, clases={[str(t) for t in sub['tx_names']]}")

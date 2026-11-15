@@ -7,7 +7,6 @@ __pycache__/
 *.pt
 data/raw/*
 data/processed/*
-runs/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
-!runs/.gitkeep
+# runs/: se versionan config_snapshot, metrics y figures; los checkpoints (*.pt) quedan fuera por la regla de arriba

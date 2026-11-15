@@ -45,17 +45,19 @@ def eval_run(run, runs_dir, mode, device):
         return build_dataset(subset, splits["test"], res, pre.stft, device).tensors
 
     X_tr, Y = stft(pre.resolutions[r_tr])
-    cases = [(r_tr, hw_tr, REGEN, X_tr)]                                   # (etiqueta, forma, entrada, tensor)
+    # (etiqueta, forma, entrada, función que construye el tensor). Se construyen de uno en uno para no agotar la RAM.
+    cases = [(r_tr, hw_tr, REGEN, lambda: X_tr)]
     for rname in [r for r in cfg.resolution.test if r != r_tr]:
         hw = tuple(res_hw(pre.resolutions[rname], pre.stft.signal_len))
-        cases.append((rname, hw, REGEN, stft(pre.resolutions[rname])[0]))
-        cases.append((rname, hw, f"redimensionada ({mode})", resize_batch(X_tr, hw, mode, True)))
+        cases.append((rname, hw, REGEN, lambda r=rname: stft(pre.resolutions[r])[0]))
+        cases.append((rname, hw, f"redimensionada ({mode})", lambda h=hw: resize_batch(X_tr, h, mode, True)))
     for rname, res in (pre.get("resolutions_fixed_window") or {}).items():
         hw = tuple(res_hw(res, pre.stft.signal_len))
-        cases.append((rname.split("_", 1)[-1], hw, FIXED, stft(res)[0]))
+        cases.append((rname.split("_", 1)[-1], hw, FIXED, lambda r=res: stft(r)[0]))
 
     rows = []
-    for label, hw, in_name, X in cases:
+    for label, hw, in_name, make in cases:
+        X = make()
         for patch, ref in (("fijo", None), ("escalado", hw_tr)):
             model.ref_hw = ref
             yt, yp = predict(model, make_loader(TensorDataset(X, Y), 256, False), device)

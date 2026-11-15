@@ -1,0 +1,38 @@
+# FASE 4 (robustez): ViT con 12 receptores, entrenado en 3 fechas y probado en una fecha no vista.
+experiment:
+  name: f4_vit_multi_r64_s43
+  phase: 4
+  seed: 43
+
+data:
+  preprocess_config: configs/preprocess/manysig_eq1_multi.yaml
+
+resolution:
+  train: R64x64
+  test: [R32x32, R64x64, R96x64, R128x128]
+
+model:
+  type: vit
+  in_chans: 1
+  patch_size: 8
+  embed_dim: 192
+  depth: 6
+  num_heads: 3
+  mlp_ratio: 4.0
+  dropout: 0.1
+
+training:
+  epochs: 30
+  batch_size: 64
+  lr: 3.0e-4
+  weight_decay: 0.05
+  warmup_epochs: 2
+  label_smoothing: 0.0
+  grad_clip: 1.0
+  amp: true
+  save_every: 1        # last.pt cada N épocas (1 = pausar con Ctrl+C sin perder casi nada)
+  patience: 8         # early stopping sobre accuracy de validación (R_train)
+  num_workers: 0
+
+output:
+  runs_dir: runs

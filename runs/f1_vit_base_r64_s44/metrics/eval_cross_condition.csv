@@ -1,0 +1,16 @@
+experiment,model,seed,condicion,rx,fecha,accuracy
+f1_vit_base_r64_s44,vit,44,celda de entrenamiento (prueba),1-1,2021_03_01,0.9988888888888889
+f1_vit_base_r64_s44,vit,44,"mismo receptor, otra fecha",1-1,2021_03_08,0.37333333333333335
+f1_vit_base_r64_s44,vit,44,"mismo receptor, otra fecha",1-1,2021_03_15,0.38066666666666665
+f1_vit_base_r64_s44,vit,44,"mismo receptor, otra fecha",1-1,2021_03_23,0.6666666666666666
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",1-19,2021_03_01,0.304
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",14-7,2021_03_01,0.20133333333333334
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",18-2,2021_03_01,0.23
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",19-2,2021_03_01,0.4106666666666667
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",2-1,2021_03_01,0.18866666666666668
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",2-19,2021_03_01,0.07666666666666666
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",20-1,2021_03_01,0.43466666666666665
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",3-19,2021_03_01,0.2866666666666667
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",7-14,2021_03_01,0.382
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",7-7,2021_03_01,0.394
+f1_vit_base_r64_s44,vit,44,"otro receptor, misma fecha",8-8,2021_03_01,0.25466666666666665

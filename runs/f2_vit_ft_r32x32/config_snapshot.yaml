@@ -1,0 +1,31 @@
+experiment:
+  name: f2_vit_ft_r32x32
+  phase: 2
+  seed: 42
+data:
+  preprocess_config: configs/preprocess/manysig_eq1.yaml
+resolution:
+  train: R64x64
+  finetune: R32x32
+  test:
+  - R32x32
+  - R64x64
+  - R96x64
+  - R128x128
+finetune:
+  source_run: f1_vit_base_r64
+  source_ckpt: best
+training:
+  epochs: 20
+  batch_size: 64
+  lr: 0.0001
+  weight_decay: 0.05
+  warmup_epochs: 1
+  label_smoothing: 0.0
+  grad_clip: 1.0
+  amp: true
+  save_every: 1
+  patience: 10
+  num_workers: 0
+output:
+  runs_dir: runs

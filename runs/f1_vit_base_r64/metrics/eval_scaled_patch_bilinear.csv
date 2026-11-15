@@ -1,0 +1,25 @@
+experiment,model,seed,R_train,R_test,H,W,entrada,parche,accuracy,f1_macro
+f1_vit_base_r64,vit,42,R64x64,R64x64,64,64,STFT regenerada (ventana = n_fft),fijo,1.0,1.0
+f1_vit_base_r64,vit,42,R64x64,R64x64,64,64,STFT regenerada (ventana = n_fft),escalado,1.0,1.0
+f1_vit_base_r64,vit,42,R64x64,R32x32,32,32,STFT regenerada (ventana = n_fft),fijo,0.25222222222222224,0.18813480482574352
+f1_vit_base_r64,vit,42,R64x64,R32x32,32,32,STFT regenerada (ventana = n_fft),escalado,0.3655555555555556,0.2529605425179532
+f1_vit_base_r64,vit,42,R64x64,R32x32,32,32,redimensionada (bilinear),fijo,0.028888888888888888,0.01336361026283507
+f1_vit_base_r64,vit,42,R64x64,R32x32,32,32,redimensionada (bilinear),escalado,0.33555555555555555,0.18209759521668364
+f1_vit_base_r64,vit,42,R64x64,R96x64,96,64,STFT regenerada (ventana = n_fft),fijo,0.1688888888888889,0.05416214764546084
+f1_vit_base_r64,vit,42,R64x64,R96x64,96,64,STFT regenerada (ventana = n_fft),escalado,0.39666666666666667,0.3312275142125587
+f1_vit_base_r64,vit,42,R64x64,R96x64,96,64,redimensionada (bilinear),fijo,0.14888888888888888,0.043450064850843066
+f1_vit_base_r64,vit,42,R64x64,R96x64,96,64,redimensionada (bilinear),escalado,0.9988888888888889,0.9988888765430727
+f1_vit_base_r64,vit,42,R64x64,R128x128,128,128,STFT regenerada (ventana = n_fft),fijo,0.16666666666666666,0.047619047619047616
+f1_vit_base_r64,vit,42,R64x64,R128x128,128,128,STFT regenerada (ventana = n_fft),escalado,0.24444444444444444,0.15594004314671528
+f1_vit_base_r64,vit,42,R64x64,R128x128,128,128,redimensionada (bilinear),fijo,0.16666666666666666,0.047619047619047616
+f1_vit_base_r64,vit,42,R64x64,R128x128,128,128,redimensionada (bilinear),escalado,0.9988888888888889,0.9988888765430727
+f1_vit_base_r64,vit,42,R64x64,R32x32,32,32,STFT de ventana fija,fijo,0.16444444444444445,0.04827136333985649
+f1_vit_base_r64,vit,42,R64x64,R32x32,32,32,STFT de ventana fija,escalado,0.19444444444444445,0.10968279691262123
+f1_vit_base_r64,vit,42,R64x64,R96x64,96,64,STFT de ventana fija,fijo,0.08666666666666667,0.051034472969094434
+f1_vit_base_r64,vit,42,R64x64,R96x64,96,64,STFT de ventana fija,escalado,0.9988888888888889,0.9988888765430727
+f1_vit_base_r64,vit,42,R64x64,R128x128,128,128,STFT de ventana fija,fijo,0.16666666666666666,0.047619047619047616
+f1_vit_base_r64,vit,42,R64x64,R128x128,128,128,STFT de ventana fija,escalado,0.9388888888888889,0.9374527215713232
+f1_vit_base_r64,vit,42,R64x64,R128x64,128,64,STFT de ventana fija,fijo,0.16666666666666666,0.047619047619047616
+f1_vit_base_r64,vit,42,R64x64,R128x64,128,64,STFT de ventana fija,escalado,0.9333333333333333,0.9306538907328371
+f1_vit_base_r64,vit,42,R64x64,R64x128,64,128,STFT de ventana fija,fijo,0.7033333333333334,0.6513533683152963
+f1_vit_base_r64,vit,42,R64x64,R64x128,64,128,STFT de ventana fija,escalado,1.0,1.0

@@ -12,7 +12,8 @@ cuando la resolución de prueba cambia, **sin fine-tuning**? ¿Lo mejora una arq
 | 1c | Control: ViT entrenado y probado en la misma resolución | hecha |
 | 2 | ViT + fine-tuning en `R_test` (cota de adaptación; se reporta aparte) | hecha (1 semilla) |
 | 3 | MSViT adaptado (SC-Conv, HVSA, RepCPE; Jiang et al.) sin fine-tuning | hecha (5 semillas) |
-| 3b | Controles de MSViT: redimensionamiento, sensibilidad por eje, parche escalado | hecha |
+| 3b | Controles: redimensionamiento, sensibilidad por eje, parche escalado, ventana fija, barrido de ventana | hecha |
+| 4 | Robustez: otros receptores y fechas; réplica con 12 receptores y fecha de prueba no vista | hecha (3 semillas) |
 
 ## Datos y resoluciones
 
@@ -75,7 +76,7 @@ Salidas: `data/processed/<nombre>_subset.npz` y `_splits.npz`; figura
 
 Sin el pkl de 2.3 GB se puede probar el pipeline con `python -m scripts.make_synthetic_pkl`.
 
-### 2. Fase 1 — ViT sin fine-tuning
+### 2. Fase 1 : ViT sin fine-tuning
 
 ```powershell
 python -m scripts.train --config configs/experiments/f1_vit_base_r64.yaml
@@ -89,7 +90,7 @@ Semillas 43–46: mismos comandos con `f1_vit_base_r64_s43.yaml` … `_s46.yaml`
 `train` entrena en `R_train` y al terminar evalúa en todas las `R_test` con STFT regenerada. En el ViT, el positional
 embedding se interpola (bicúbica) cuando cambia la cuadrícula de parches; no se actualiza ningún peso.
 
-### 3. Control — entrenar y probar en la misma resolución
+### 3. Control : entrenar y probar en la misma resolución
 
 ```powershell
 python -m scripts.train --config configs/experiments/f1c_vit_train_r32x32.yaml
@@ -99,7 +100,7 @@ python -m scripts.train --config configs/experiments/f1c_vit_train_r128x128.yaml
 
 Sirve para descartar que la caída de la fase 1 sea por falta de información en la resolución de prueba.
 
-### 4. Fase 2 — ViT con fine-tuning
+### 4. Fase 2 : ViT con fine-tuning
 
 ```powershell
 python -m scripts.finetune --config configs/experiments/f2_vit_ft_r32x32.yaml
@@ -110,7 +111,7 @@ python -m scripts.finetune --config configs/experiments/f2_vit_ft_r128x128.yaml
 Parte de `runs/f1_vit_base_r64/checkpoints/best.pt`, adapta el positional embedding a la resolución objetivo y
 reentrena 20 epochs con lr 1e-4. Requiere haber corrido la fase 1. Acepta `--resume` y `--overwrite`.
 
-### 5. Fase 3 — MSViT sin fine-tuning
+### 5. Fase 3 : MSViT sin fine-tuning
 
 ```powershell
 python -m scripts.train --config configs/experiments/f3_msvit_base_r64.yaml
@@ -134,6 +135,13 @@ python -m scripts.eval_resize_grid --runs ... --sizes 32 48 64 80 96 128
 python -m scripts.eval_scaled_patch --runs f1_vit_base_r64 f1_vit_base_r64_s43 f1_vit_base_r64_s44 f1_vit_base_r64_s45 f1_vit_base_r64_s46 f3_msvit_base_r64 f3_msvit_base_r64_s43 f3_msvit_base_r64_s44 f3_msvit_base_r64_s45 f3_msvit_base_r64_s46
 ```
 
+```powershell
+# d) Barrido de ventana: imagen siempre 64x64 (mismo n_fft y hop); solo cambia la longitud de la ventana STFT
+python -m scripts.eval_window_sweep --runs f1_vit_base_r64 f1_vit_base_r64_s43 f1_vit_base_r64_s44 f1_vit_base_r64_s45 f1_vit_base_r64_s46 f3_msvit_base_r64 f3_msvit_base_r64_s43 f3_msvit_base_r64_s44 f3_msvit_base_r64_s45 f3_msvit_base_r64_s46
+```
+
+Salida de (d): `figures/comparison/window_sweep__acc_vs_window__n_runs-10.png` y su tabla `window_sweep__summary__n_runs-10.csv`.
+
 Salida de (c): `runs/<run>/metrics/eval_scaled_patch_bilinear.csv` y la tabla agregada
 `figures/comparison/scaled_patch__summary__mode-bilinear_n_runs-10.csv`.
 
@@ -148,6 +156,26 @@ jupyter lab notebooks/comparison.ipynb
 ```
 
 `plot_seeds` necesita haber corrido antes `eval_resize` para cada run y modo.
+
+### 8. Fase 4 : robustez con más receptores y fechas
+
+```powershell
+# a) Sin reentrenar: los modelos de 1 receptor / 1 fecha, probados en otras fechas y otros receptores (en R64x64)
+python -m scripts.eval_cross_condition --runs f1_vit_base_r64 f1_vit_base_r64_s43 f1_vit_base_r64_s44 f1_vit_base_r64_s45 f1_vit_base_r64_s46 f3_msvit_base_r64 f3_msvit_base_r64_s43 f3_msvit_base_r64_s44 f3_msvit_base_r64_s45 f3_msvit_base_r64_s46
+
+# b) Réplica: 12 receptores, entrenamiento en 3 fechas y prueba en una fecha no vista
+python -m scripts.preprocess --config configs/preprocess/manysig_eq1_multi.yaml
+python -m scripts.train --config configs/experiments/f4_vit_multi_r64.yaml        # y _s43, _s44
+python -m scripts.train --config configs/experiments/f4_msvit_multi_r64.yaml      # y _s43, _s44
+
+# c) Mismos controles que en la sección 6, sobre los modelos de la fase 4
+python -m scripts.eval_scaled_patch --runs f4_vit_multi_r64 f4_vit_multi_r64_s43 f4_vit_multi_r64_s44 f4_msvit_multi_r64 f4_msvit_multi_r64_s43 f4_msvit_multi_r64_s44
+python -m scripts.eval_window_sweep --runs f4_vit_multi_r64 f4_vit_multi_r64_s43 f4_vit_multi_r64_s44 f4_msvit_multi_r64 f4_msvit_multi_r64_s43 f4_msvit_multi_r64_s44
+```
+
+(a) mide cuánto del ~100 % depende del receptor y del día de entrenamiento. (b) y (c) repiten el estudio de
+resolución en un escenario donde la prueba es un día que el modelo nunca vio (72 000 señales: 6 Tx × 12 Rx × 4 fechas
+× 250; la última fecha completa es la prueba).
 
 ## Resultados (exactitud en prueba, 900 señales, azar = 0.167)
 
@@ -181,6 +209,47 @@ Lectura:
 - **Control (fase 1c):** entrenar y probar en la misma resolución da 0.997–1.000 en las cuatro.
 - **Fine-tuning (fase 2, semilla 42):** 0.998–0.999 en la resolución objetivo; en `R64x64` quedan 0.72 / 0.54 / 0.81.
 
+### Fase 4 — robustez
+
+**a) Modelos de 1 receptor / 1 fecha probados en otras condiciones** (en `R64x64`, 5 semillas por modelo):
+
+| Condición de prueba | ViT | MSViT |
+|---|---|---|
+| Celda de entrenamiento (señales de prueba) | 0.999 ± 0.001 | 0.999 ± 0.001 |
+| Mismo receptor, otras 3 fechas | 0.518 ± 0.035 | 0.514 ± 0.042 |
+| Otros 11 receptores, misma fecha | 0.275 ± 0.018 | 0.277 ± 0.024 |
+
+El ~100 % de las fases 1–3 es específico del receptor y del día de entrenamiento.
+
+**b) Réplica con 12 receptores, 3 fechas de entrenamiento y una fecha de prueba no vista** (3 semillas por modelo;
+validación 0.99, prueba en `R64x64`: ViT 0.906 ± 0.012, MSViT 0.904 ± 0.010). Tabla completa:
+`figures/comparison/scaled_patch__summary__mode-bilinear_n_runs-6.csv`.
+
+| Entrada | Prueba | ViT, parche fijo | ViT, parche escalado | MSViT, parche fijo | MSViT, parche escalado |
+|---|---|---|---|---|---|
+| Redimensionada (bilinear) | `R32x32` | 0.167 ± 0.021 | 0.299 ± 0.032 | 0.182 ± 0.044 | 0.422 ± 0.046 |
+| | `R96x64` | 0.163 ± 0.021 | 0.741 ± 0.020 | 0.232 ± 0.055 | 0.863 ± 0.005 |
+| | `R128x128` | 0.166 ± 0.009 | 0.768 ± 0.027 | 0.178 ± 0.050 | 0.862 ± 0.011 |
+| STFT de ventana fija (64) | `R32x32` | 0.146 ± 0.041 | 0.248 ± 0.055 | 0.201 ± 0.035 | 0.536 ± 0.021 |
+| | `R96x64` | 0.172 ± 0.023 | 0.378 ± 0.064 | 0.225 ± 0.053 | 0.438 ± 0.002 |
+| | `R128x64` (solo frecuencia) | 0.173 ± 0.009 | 0.337 ± 0.043 | 0.199 ± 0.058 | 0.361 ± 0.008 |
+| | `R64x128` (solo tiempo) | 0.358 ± 0.031 | 0.902 ± 0.013 | 0.468 ± 0.032 | 0.890 ± 0.018 |
+| | `R128x128` | 0.144 ± 0.014 | 0.342 ± 0.032 | 0.151 ± 0.048 | 0.353 ± 0.004 |
+| STFT regenerada (ventana = n_fft) | `R32x32` | 0.176 ± 0.011 | 0.204 ± 0.007 | 0.227 ± 0.061 | 0.303 ± 0.028 |
+| | `R96x64` | 0.210 ± 0.038 | 0.282 ± 0.042 | 0.250 ± 0.038 | 0.383 ± 0.044 |
+| | `R128x128` | 0.190 ± 0.039 | 0.253 ± 0.040 | 0.206 ± 0.055 | 0.249 ± 0.043 |
+
+Barrido de ventana a 64×64 (`window_sweep__summary__n_runs-6.csv`): ventana 48 → ViT 0.547 / MSViT 0.804;
+56 → 0.789 / 0.861; 64 → 0.906 / 0.904; 72 → 0.859 / 0.886; 80 → 0.567 / 0.713; 96 → 0.330 / 0.472; 128 → 0.236 / 0.356.
+
+Qué se mantiene y qué cambia respecto al escenario de 1 receptor / 1 fecha:
+
+- **Se mantiene:** con parche fijo ambos modelos colapsan al cambiar la resolución; el parche escalado recupera el
+  cambio geométrico y el cambio en el eje de tiempo; el cambio de ventana sigue sin resolverse.
+- **Cambia:** el remuestreo en frecuencia con ventana fija ya no se recupera (0.34–0.44 frente a 0.88–0.97), y el
+  MSViT pasa a ser más robusto que el ViT (redimensionamiento con parche escalado 0.86 frente a 0.74–0.77; mayor
+  tolerancia a la ventana en todo el barrido).
+
 ## Notas sobre MSViT
 
 - Es una **adaptación** de Jiang et al., *Extending the scale generalization of the Vision Transformer without
@@ -200,14 +269,14 @@ Lectura:
 ```
 configs/preprocess/    datos + resoluciones STFT (fuente única)
 configs/experiments/   un YAML por experimento (el nombre del modelo = experiment.name)
-                       f1_*  ViT base · f1c_*  control por resolución · f2_*  fine-tuning · f3_*  MSViT · _sNN  semilla
+                       f1_*  ViT base · f1c_*  control por resolución · f2_*  fine-tuning · f3_*  MSViT · f4_*  robustez · _sNN  semilla
 preprocessing/         dataset_loader, splits, stft_generator, explore_stft (+ README con lineamientos)
 src/models/            vit.py · msvit.py · patch_scale.py (parche escalado del ViT)
 src/training/          trainer (checkpoints reanudables), data, setup
 src/evaluation/        métricas, evaluación por resolución y de fine-tuning
-scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_resize_grid, eval_scaled_patch,
+scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_resize_grid, eval_scaled_patch, eval_window_sweep, eval_cross_condition,
                        plot_seeds, inspect_manysig, make_synthetic_pkl
-runs/<experimento>/    config_snapshot.yaml, checkpoints/{last,best}.pt, metrics/*.csv, figures/*.png  (no versionado)
+runs/<experimento>/    config_snapshot.yaml, metrics/*.csv, figures/*.png  (versionados) · checkpoints/{last,best}.pt (no)
 figures/               exploration/ y comparison/ (figuras y tablas agregadas)
 notebooks/             comparison.ipynb (solo comparaciones)
 ```
