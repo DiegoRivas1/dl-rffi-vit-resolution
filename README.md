@@ -153,7 +153,13 @@ En (a) y (b) conviene pasar los 10 runs (5 de ViT y 5 de MSViT) para tener media
 python -m scripts.plot_seeds                    # los 3 modos de interpolación
 python -m scripts.plot_seeds --modes bilinear
 jupyter lab notebooks/comparison.ipynb
+jupyter lab notebooks/visualizacion_entradas.ipynb
 ```
+
+`visualizacion_entradas.ipynb` muestra qué recibe el modelo en cada caso (señal I/Q, espectrograma, huella por
+transmisor, los tres niveles de cambio de resolución, barrido de ventana, parche fijo y escalado) y cómo responde
+(tokens y predicciones). Usa los `best.pt` de `f1_vit_base_r64` y `f3_msvit_base_r64` y guarda las figuras en
+`figures/notebook/`.
 
 `plot_seeds` necesita haber corrido antes `eval_resize` para cada run y modo.
 
@@ -278,7 +284,7 @@ scripts/               preprocess, train, evaluate, finetune, eval_resize, eval_
                        plot_seeds, inspect_manysig, make_synthetic_pkl
 runs/<experimento>/    config_snapshot.yaml, metrics/*.csv, figures/*.png  (versionados) · checkpoints/{last,best}.pt (no)
 figures/               exploration/ y comparison/ (figuras y tablas agregadas)
-notebooks/             comparison.ipynb (solo comparaciones)
+notebooks/             comparison.ipynb (comparaciones) · visualizacion_entradas.ipynb (entradas y respuesta del modelo)
 ```
 
 Figuras: `<experimento>__<tipo>__<características>.png`, p. ej. `f1_vit_base_r64__confmat__train-R64x64_test-R96x64.png`.
